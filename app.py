@@ -12,10 +12,7 @@ from config import (
 )
 from logger import setup_logger
 from storage import save_events, save_text
-from summary import (
-    get_todays_summary,
-    get_tomorrows_summary,
-)
+from summary import get_todays_summary
 from ticketmaster import (
     TicketmasterClient,
     TicketmasterError,
@@ -24,20 +21,6 @@ from weather import WeatherClient, WeatherError
 
 
 logger = setup_logger()
-
-
-def build_daily_report(
-    todays_summary: str,
-    tomorrows_summary: str,
-) -> str:
-    """
-    Combine today's and tomorrow's summaries into one report.
-    """
-
-    return (
-        f"{todays_summary}\n\n"
-        f"{tomorrows_summary}\n"
-    )
 
 
 def main() -> None:
@@ -128,19 +111,8 @@ def main() -> None:
         events_output_path,
     )
 
-    todays_summary = get_todays_summary(
+    daily_report = get_todays_summary(
         events
-    )
-
-    tomorrows_summary = (
-        get_tomorrows_summary(
-            events
-        )
-    )
-
-    daily_report = build_daily_report(
-        todays_summary=todays_summary,
-        tomorrows_summary=tomorrows_summary,
     )
 
     summary_output_path = save_text(
