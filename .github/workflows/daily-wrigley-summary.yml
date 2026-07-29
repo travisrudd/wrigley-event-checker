@@ -16,6 +16,10 @@ jobs:
 
     env:
       TICKETMASTER_API_KEY: ${{ secrets.TICKETMASTER_API_KEY }}
+      TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
+      TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+      TWILIO_WHATSAPP_FROM: ${{ secrets.TWILIO_WHATSAPP_FROM }}
+      TWILIO_WHATSAPP_TO: ${{ secrets.TWILIO_WHATSAPP_TO }}
 
     steps:
       - name: Check out repository
@@ -41,6 +45,9 @@ jobs:
 
       - name: Run Wrigley Events Bot
         run: python app.py
+
+      - name: Send WhatsApp summary
+        run: python send_whatsapp.py
 
       - name: Upload generated summary
         uses: actions/upload-artifact@v7
