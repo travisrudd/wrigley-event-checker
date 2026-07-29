@@ -1,7 +1,11 @@
 from datetime import date, datetime, timedelta
 from typing import List, Optional
+from zoneinfo import ZoneInfo
 
 from models import Event
+
+
+CHICAGO_TIMEZONE = ZoneInfo("America/Chicago")
 
 
 EVENT_ICONS = {
@@ -14,6 +18,16 @@ EVENT_ICONS = {
     "Soccer": "⚽",
     "Volleyball": "🏐",
 }
+
+
+def get_chicago_today() -> date:
+    """
+    Return the current calendar date in Chicago.
+    """
+
+    return datetime.now(
+        CHICAGO_TIMEZONE
+    ).date()
 
 
 def get_summary_for_date(
@@ -88,23 +102,26 @@ def get_summary_for_date(
 
 def get_todays_summary(events: List[Event]) -> str:
     """
-    Generate a summary for today's events.
+    Generate a summary for today's events in Chicago.
     """
 
     return get_summary_for_date(
         events=events,
-        target_date=date.today(),
+        target_date=get_chicago_today(),
     )
 
 
 def get_tomorrows_summary(events: List[Event]) -> str:
     """
-    Generate a summary for tomorrow's events.
+    Generate a summary for tomorrow's events in Chicago.
     """
 
     return get_summary_for_date(
         events=events,
-        target_date=date.today() + timedelta(days=1),
+        target_date=(
+            get_chicago_today()
+            + timedelta(days=1)
+        ),
     )
 
 
@@ -159,8 +176,12 @@ def format_event(event: Event) -> List[str]:
         lines.append("Weather")
         lines.append("-" * 20)
 
-        temperature = event.weather.get("temperature_f")
-        feels_like = event.weather.get("feels_like_f")
+        temperature = event.weather.get(
+            "temperature_f"
+        )
+        feels_like = event.weather.get(
+            "feels_like_f"
+        )
         condition = event.weather.get(
             "condition",
             "Unknown",
@@ -174,15 +195,19 @@ def format_event(event: Event) -> List[str]:
 
         if temperature is not None:
             lines.append(
-                f"Temperature: {format_number(temperature)}°F"
+                "Temperature: "
+                f"{format_number(temperature)}°F"
             )
 
         if feels_like is not None:
             lines.append(
-                f"Feels Like: {format_number(feels_like)}°F"
+                "Feels Like: "
+                f"{format_number(feels_like)}°F"
             )
 
-        lines.append(f"Conditions: {condition}")
+        lines.append(
+            f"Conditions: {condition}"
+        )
 
         if precipitation is not None:
             lines.append(
@@ -192,7 +217,8 @@ def format_event(event: Event) -> List[str]:
 
         if wind_speed is not None:
             lines.append(
-                f"Wind: {format_number(wind_speed)} mph"
+                "Wind: "
+                f"{format_number(wind_speed)} mph"
             )
     else:
         lines.append("")
@@ -202,12 +228,16 @@ def format_event(event: Event) -> List[str]:
 
     if event.ticket_url:
         lines.append("")
-        lines.append(f"Tickets: {event.ticket_url}")
+        lines.append(
+            f"Tickets: {event.ticket_url}"
+        )
 
     return lines
 
 
-def build_daily_alerts(events: List[Event]) -> List[str]:
+def build_daily_alerts(
+    events: List[Event],
+) -> List[str]:
     """
     Generate crowd and weather alerts for a day's events.
     """
@@ -280,10 +310,17 @@ def get_highest_weather_value(
         if not event.weather:
             continue
 
-        value = event.weather.get(field_name)
+        value = event.weather.get(
+            field_name
+        )
 
-        if isinstance(value, (int, float)):
-            values.append(float(value))
+        if isinstance(
+            value,
+            (int, float),
+        ):
+            values.append(
+                float(value)
+            )
 
     if not values:
         return None
@@ -322,7 +359,9 @@ def format_event_time(
     return event_time
 
 
-def format_number(value: float) -> str:
+def format_number(
+    value: float,
+) -> str:
     """
     Display whole numbers without decimals while preserving useful
     decimal values.
@@ -331,6 +370,8 @@ def format_number(value: float) -> str:
     numeric_value = float(value)
 
     if numeric_value.is_integer():
-        return str(int(numeric_value))
+        return str(
+            int(numeric_value)
+        )
 
     return f"{numeric_value:.1f}"
