@@ -44,28 +44,79 @@ jobs:
       - name: Run Wrigley Events Bot
         run: python app.py
 
-      - name: Create GitHub notification
-        env:
-          REPOSITORY_OWNER: ${{ github.repository_owner }}
+      - name: Create formatted issue body
         run: |
-          REPORT_DATE="$(TZ=America/Chicago date '+%B %-d, %Y')"
-          ISSUE_TITLE="🏟️ Wrigley Events — ${REPORT_DATE}"
+          REPORT_DATE="$(TZ=America/Chicago date '+%A, %B %-d, %Y')"
+          UPDATED_TIME="$(TZ=America/Chicago date '+%-I:%M %p %Z')"
 
           {
-            echo "@${REPOSITORY_OWNER}"
+            echo "# 🏟️ Wrigley Daily"
             echo
-            cat output/daily_summary.txt
+            echo "**${REPORT_DATE}**"
+            echo
+            echo "> Your two-day Wrigley Field event and weather outlook."
             echo
             echo "---"
             echo
-            echo "_Generated automatically by the Wrigley Events Bot._"
+            echo "<div>"
+            echo
+
+            # Preserve line breaks from the generated text report.
+            sed 's/$/  /' output/daily_summary.txt
+
+            echo
+            echo "</div>"
+            echo
+            echo "---"
+            echo
+            echo "###### Last updated automatically at ${UPDATED_TIME}"
           } > issue-body.md
 
-          gh issue create \
-            --repo "$GITHUB_REPOSITORY" \
-            --title "$ISSUE_TITLE" \
-            --body-file issue-body.md \
-            --assignee "$REPOSITORY_OWNER"
+      - name: Create or update persistent issue
+        env:
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+        run: |
+          ISSUE_TITLE="🏟️ Wrigley Daily"
+
+          ISSUE_NUMBER="$(
+            gh issue list \
+              --repo "$GITHUB_REPOSITORY" \
+              --state all \
+              --limit 100 \
+              --json number,title \
+              --jq '.[] | select(.title == "🏟️ Wrigley Daily") | .number' \
+              | head -n 1
+          )"
+
+          REPORT_DATE="$(TZ=America/Chicago date '+%B %-d, %Y')"
+
+          if [ -n "$ISSUE_NUMBER" ]; then
+            gh issue reopen "$ISSUE_NUMBER" \
+              --repo "$GITHUB_REPOSITORY" 2>/dev/null || true
+
+            gh issue edit "$ISSUE_NUMBER" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$ISSUE_TITLE" \
+              --body-file issue-body.md \
+              --add-assignee "$REPOSITORY_OWNER"
+
+            gh issue comment "$ISSUE_NUMBER" \
+              --repo "$GITHUB_REPOSITORY" \
+              --body "🔔 The Wrigley outlook was updated for **${REPORT_DATE}**."
+          else
+            ISSUE_URL="$(
+              gh issue create \
+                --repo "$GITHUB_REPOSITORY" \
+                --title "$ISSUE_TITLE" \
+                --body-file issue-body.md \
+                --assignee "$REPOSITORY_OWNER"
+            )"
+
+            ISSUE_NUMBER="${ISSUE_URL##*/}"
+
+            gh issue pin "$ISSUE_NUMBER" \
+              --repo "$GITHUB_REPOSITORY"
+          fi
 
       - name: Upload generated summary
         uses: actions/upload-artifact@v7
