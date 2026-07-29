@@ -50,18 +50,17 @@ jobs:
           UPDATED_TIME="$(TZ=America/Chicago date '+%-I:%M %p %Z')"
 
           {
-            echo "# 🏟️ Wrigley Daily"
+            echo "# 🏟️ Wrigley Today"
             echo
             echo "**${REPORT_DATE}**"
             echo
-            echo "> Your two-day Wrigley Field event and weather outlook."
+            echo "> Today's Wrigley Field event and weather outlook."
             echo
             echo "---"
             echo
             echo "<div>"
             echo
 
-            # Preserve line breaks from the generated text report.
             sed 's/$/  /' output/daily_summary.txt
 
             echo
@@ -76,7 +75,7 @@ jobs:
         env:
           REPOSITORY_OWNER: ${{ github.repository_owner }}
         run: |
-          ISSUE_TITLE="🏟️ Wrigley Daily"
+          ISSUE_TITLE="🏟️ Wrigley Today"
 
           ISSUE_NUMBER="$(
             gh issue list \
@@ -84,7 +83,7 @@ jobs:
               --state all \
               --limit 100 \
               --json number,title \
-              --jq '.[] | select(.title == "🏟️ Wrigley Daily") | .number' \
+              --jq '.[] | select(.title == "🏟️ Wrigley Today") | .number' \
               | head -n 1
           )"
 
