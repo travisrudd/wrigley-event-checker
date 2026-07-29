@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
   generate-summary:
@@ -16,10 +17,7 @@ jobs:
 
     env:
       TICKETMASTER_API_KEY: ${{ secrets.TICKETMASTER_API_KEY }}
-      TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
-      TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
-      TWILIO_WHATSAPP_FROM: ${{ secrets.TWILIO_WHATSAPP_FROM }}
-      TWILIO_WHATSAPP_TO: ${{ secrets.TWILIO_WHATSAPP_TO }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       - name: Check out repository
@@ -36,7 +34,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Verify required secret
+      - name: Verify Ticketmaster secret
         run: |
           if [ -z "$TICKETMASTER_API_KEY" ]; then
             echo "TICKETMASTER_API_KEY is not configured."
@@ -46,8 +44,28 @@ jobs:
       - name: Run Wrigley Events Bot
         run: python app.py
 
-      - name: Send WhatsApp summary
-        run: python send_whatsapp.py
+      - name: Create GitHub notification
+        env:
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+        run: |
+          REPORT_DATE="$(TZ=America/Chicago date '+%B %-d, %Y')"
+          ISSUE_TITLE="🏟️ Wrigley Events — ${REPORT_DATE}"
+
+          {
+            echo "@${REPOSITORY_OWNER}"
+            echo
+            cat output/daily_summary.txt
+            echo
+            echo "---"
+            echo
+            echo "_Generated automatically by the Wrigley Events Bot._"
+          } > issue-body.md
+
+          gh issue create \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$ISSUE_TITLE" \
+            --body-file issue-body.md \
+            --assignee "$REPOSITORY_OWNER"
 
       - name: Upload generated summary
         uses: actions/upload-artifact@v7
