@@ -1,0 +1,53 @@
+name: Daily Wrigley Summary
+
+on:
+  workflow_dispatch:
+
+  schedule:
+    - cron: "5 8 * * *"
+      timezone: "America/Chicago"
+
+permissions:
+  contents: read
+
+jobs:
+  generate-summary:
+    runs-on: ubuntu-latest
+
+    env:
+      TICKETMASTER_API_KEY: ${{ secrets.TICKETMASTER_API_KEY }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.9"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Verify required secret
+        run: |
+          if [ -z "$TICKETMASTER_API_KEY" ]; then
+            echo "TICKETMASTER_API_KEY is not configured."
+            exit 1
+          fi
+
+      - name: Run Wrigley Events Bot
+        run: python app.py
+
+      - name: Upload generated summary
+        uses: actions/upload-artifact@v7
+        with:
+          name: wrigley-daily-summary
+          path: |
+            output/daily_summary.txt
+            output/wrigley_events.json
+          if-no-files-found: error
+          retention-days: 7
