@@ -56,7 +56,6 @@ jobs:
             echo
             cat output/daily_summary.txt
             echo
-            echo "---"
             echo
             echo "_Last updated automatically at ${UPDATED_TIME}_"
           } > issue-body.md
