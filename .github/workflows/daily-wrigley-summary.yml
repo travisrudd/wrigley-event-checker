@@ -44,7 +44,7 @@ jobs:
       - name: Run Wrigley Events Bot
         run: python app.py
 
-      - name: Create formatted issue body
+      - name: Create issue body
         run: |
           REPORT_DATE="$(TZ=America/Chicago date '+%A, %B %-d, %Y')"
           UPDATED_TIME="$(TZ=America/Chicago date '+%-I:%M %p %Z')"
@@ -54,21 +54,11 @@ jobs:
             echo
             echo "**${REPORT_DATE}**"
             echo
-            echo "> Today's Wrigley Field event and weather outlook."
+            cat output/daily_summary.txt
             echo
             echo "---"
             echo
-            echo "<div>"
-            echo
-
-            sed 's/$/  /' output/daily_summary.txt
-
-            echo
-            echo "</div>"
-            echo
-            echo "---"
-            echo
-            echo "###### Last updated automatically at ${UPDATED_TIME}"
+            echo "_Last updated automatically at ${UPDATED_TIME}_"
           } > issue-body.md
 
       - name: Create or update persistent issue
@@ -101,7 +91,7 @@ jobs:
 
             gh issue comment "$ISSUE_NUMBER" \
               --repo "$GITHUB_REPOSITORY" \
-              --body "🔔 The Wrigley outlook was updated for **${REPORT_DATE}**."
+              --body "🔔 Updated for **${REPORT_DATE}**."
           else
             ISSUE_URL="$(
               gh issue create \
