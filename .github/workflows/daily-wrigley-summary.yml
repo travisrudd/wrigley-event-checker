@@ -60,51 +60,29 @@ jobs:
             echo "_Last updated automatically at ${UPDATED_TIME}_"
           } > issue-body.md
 
-      - name: Create or update persistent issue
+            - name: Update persistent issue
         env:
-          REPOSITORY_OWNER: ${{ github.repository_owner }}
+          ISSUE_NUMBER: "12"
         run: |
           ISSUE_TITLE="🏟️ Wrigley Today"
 
-          ISSUE_NUMBER="$(
-            gh issue list \
-              --repo "$GITHUB_REPOSITORY" \
-              --state all \
-              --limit 100 \
-              --json number,title \
-              --jq '.[] | select(.title == "🏟️ Wrigley Today") | .number' \
-              | head -n 1
-          )"
+          echo "Updating issue #${ISSUE_NUMBER}"
+          echo
+          echo "Generated issue body:"
+          cat issue-body.md
 
-          REPORT_DATE="$(TZ=America/Chicago date '+%B %-d, %Y')"
+          gh issue edit "$ISSUE_NUMBER" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$ISSUE_TITLE" \
+            --body-file issue-body.md
 
-          if [ -n "$ISSUE_NUMBER" ]; then
-            gh issue reopen "$ISSUE_NUMBER" \
-              --repo "$GITHUB_REPOSITORY" 2>/dev/null || true
+          echo
+          echo "Issue body after update:"
 
-            gh issue edit "$ISSUE_NUMBER" \
-              --repo "$GITHUB_REPOSITORY" \
-              --title "$ISSUE_TITLE" \
-              --body-file issue-body.md \
-              --add-assignee "$REPOSITORY_OWNER"
-
-            gh issue comment "$ISSUE_NUMBER" \
-              --repo "$GITHUB_REPOSITORY" \
-              --body "🔔 Updated for **${REPORT_DATE}**."
-          else
-            ISSUE_URL="$(
-              gh issue create \
-                --repo "$GITHUB_REPOSITORY" \
-                --title "$ISSUE_TITLE" \
-                --body-file issue-body.md \
-                --assignee "$REPOSITORY_OWNER"
-            )"
-
-            ISSUE_NUMBER="${ISSUE_URL##*/}"
-
-            gh issue pin "$ISSUE_NUMBER" \
-              --repo "$GITHUB_REPOSITORY"
-          fi
+          gh issue view "$ISSUE_NUMBER" \
+            --repo "$GITHUB_REPOSITORY" \
+            --json body \
+            --jq '.body'
 
       - name: Upload generated summary
         uses: actions/upload-artifact@v7
