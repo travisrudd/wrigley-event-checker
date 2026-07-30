@@ -25,9 +25,7 @@ def get_chicago_today() -> date:
     Return the current calendar date in Chicago.
     """
 
-    return datetime.now(
-        CHICAGO_TIMEZONE
-    ).date()
+    return datetime.now(CHICAGO_TIMEZONE).date()
 
 
 def get_summary_for_date(
@@ -35,7 +33,7 @@ def get_summary_for_date(
     target_date: date,
 ) -> str:
     """
-    Generate a formatted summary for all events on a specific date.
+    Generate a clean Markdown summary for all events on a specific date.
     """
 
     matching_events = filter_events_by_date(
@@ -43,61 +41,32 @@ def get_summary_for_date(
         target_date=target_date,
     )
 
-    formatted_date = target_date.strftime(
-        "%A, %B %d, %Y"
-    ).replace(" 0", " ")
-
-    lines = [
-        "=" * 60,
-        "Wrigley Field Daily Summary",
-        formatted_date,
-        "=" * 60,
-        "",
-    ]
-
     if not matching_events:
-        lines.extend(
-            [
-                "No Wrigley Field events are currently scheduled.",
-                "",
-                "=" * 60,
-            ]
+        return (
+            "✅ **No events are currently scheduled at "
+            "Wrigley Field today.**"
         )
 
-        return "\n".join(lines)
+    lines = []
 
-    event_word = (
-        "event"
-        if len(matching_events) == 1
-        else "events"
-    )
+    alerts = build_daily_alerts(matching_events)
 
-    lines.append(
-        f"{len(matching_events)} {event_word} scheduled"
-    )
-    lines.append("")
+    if alerts:
+        lines.append("## ⚠️ Today's Alerts")
+        lines.append("")
+
+        for alert in alerts:
+            lines.append(f"- {alert}")
+
+        lines.append("")
 
     for index, event in enumerate(matching_events):
         lines.extend(format_event(event))
 
         if index < len(matching_events) - 1:
             lines.append("")
-            lines.append("-" * 60)
-            lines.append("")
 
-    alerts = build_daily_alerts(matching_events)
-
-    if alerts:
-        lines.append("")
-        lines.append("=" * 60)
-        lines.append("Alerts")
-        lines.append("=" * 60)
-        lines.extend(alerts)
-
-    lines.append("")
-    lines.append("=" * 60)
-
-    return "\n".join(lines)
+    return "\n".join(lines).strip()
 
 
 def get_todays_summary(events: List[Event]) -> str:
@@ -157,7 +126,7 @@ def event_sort_key(event: Event) -> str:
 
 def format_event(event: Event) -> List[str]:
     """
-    Format one event for a daily summary.
+    Format one event as a clean Markdown section.
     """
 
     icon = EVENT_ICONS.get(
@@ -166,15 +135,19 @@ def format_event(event: Event) -> List[str]:
     )
 
     lines = [
-        f"{icon} {event.name}",
-        format_event_time(event.time),
-        f"Event Type: {event.event_type}",
+        f"## {icon} {event.name}",
+        "",
+        f"🕐 **{format_event_time(event.time)}**",
     ]
 
     if event.weather:
-        lines.append("")
-        lines.append("Weather")
-        lines.append("-" * 20)
+        lines.extend(
+            [
+                "",
+                "### 🌤️ Weather",
+                "",
+            ]
+        )
 
         temperature = event.weather.get(
             "temperature_f"
@@ -193,46 +166,76 @@ def format_event(event: Event) -> List[str]:
             "wind_speed_mph"
         )
 
-        if temperature is not None:
-            lines.append(
-                "Temperature: "
-                f"{format_number(temperature)}°F"
-            )
+        temperature_line = build_temperature_line(
+            temperature=temperature,
+            feels_like=feels_like,
+        )
 
-        if feels_like is not None:
+        if temperature_line:
             lines.append(
-                "Feels Like: "
-                f"{format_number(feels_like)}°F"
+                f"- 🌡️ {temperature_line}"
             )
 
         lines.append(
-            f"Conditions: {condition}"
+            f"- **Conditions:** {condition}"
         )
 
         if precipitation is not None:
             lines.append(
-                "Rain Chance: "
+                "- 🌧️ **Rain chance:** "
                 f"{format_number(precipitation)}%"
             )
 
         if wind_speed is not None:
             lines.append(
-                "Wind: "
+                "- 💨 **Wind:** "
                 f"{format_number(wind_speed)} mph"
             )
     else:
-        lines.append("")
-        lines.append(
-            "Weather: Forecast not yet available"
+        lines.extend(
+            [
+                "",
+                "### 🌤️ Weather",
+                "",
+                "- Forecast not yet available",
+            ]
         )
 
     if event.ticket_url:
-        lines.append("")
-        lines.append(
-            f"Tickets: {event.ticket_url}"
+        lines.extend(
+            [
+                "",
+                f"🎟️ [View tickets and event details]({event.ticket_url})",
+            ]
         )
 
     return lines
+
+
+def build_temperature_line(
+    temperature: Optional[float],
+    feels_like: Optional[float],
+) -> Optional[str]:
+    """
+    Combine the temperature and feels-like temperature into one line.
+    """
+
+    if temperature is None and feels_like is None:
+        return None
+
+    if temperature is not None and feels_like is not None:
+        return (
+            f"**{format_number(temperature)}°F** "
+            f"— feels like {format_number(feels_like)}°F"
+        )
+
+    if temperature is not None:
+        return f"**{format_number(temperature)}°F**"
+
+    return (
+        "Feels like "
+        f"**{format_number(feels_like)}°F**"
+    )
 
 
 def build_daily_alerts(
@@ -246,7 +249,7 @@ def build_daily_alerts(
 
     if len(events) >= 2:
         alerts.append(
-            "⚠ Busy day: Multiple events are scheduled near "
+            "**Busy day:** Multiple events are scheduled near "
             "Wrigley Field."
         )
 
@@ -260,7 +263,7 @@ def build_daily_alerts(
         and highest_rain_chance >= 50
     ):
         alerts.append(
-            "🌧 Rain likely: At least one event has a "
+            "**Rain likely:** At least one event has a "
             f"{format_number(highest_rain_chance)}% chance "
             "of precipitation."
         )
@@ -275,7 +278,7 @@ def build_daily_alerts(
         and highest_temperature >= 90
     ):
         alerts.append(
-            "🔥 Hot weather: Temperatures may reach "
+            "**Hot weather:** Temperatures may reach "
             f"{format_number(highest_temperature)}°F."
         )
 
@@ -289,7 +292,7 @@ def build_daily_alerts(
         and strongest_wind >= 20
     ):
         alerts.append(
-            "💨 Strong winds: Forecast wind speeds may reach "
+            "**Strong winds:** Forecast wind speeds may reach "
             f"{format_number(strongest_wind)} mph."
         )
 
